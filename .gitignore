@@ -1,4 +1,4 @@
-# ===== 构建产物 / 二进制 =====
+# ===== 构建产物 / 二进制（由 build.js 重新生成，不入库）=====
 *.exe
 *.dll
 *.pdb
@@ -14,6 +14,13 @@ app/cs/obj/
 app/gui/bin/
 app/gui/obj/
 app/gui/out*/
+# 单文件应用构建产物（由 src/ + build.js 生成）
+app/gui/app.html
+app/cs/app.html
+# 图标二进制资源
+app/gui/icon.png
+app/gui/app.ico
+个人工作台.png
 
 # ===== 临时 / 测试产物 =====
 __rt_*/
@@ -21,6 +28,8 @@ __cfg_*/
 __check.js
 __err.txt
 __sample.xlsx
+__push_*.json
+__*.json
 *.log
 tmp/
 rt_probe.js
