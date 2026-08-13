@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>办公工作台 · 使用手册</title>
+<style>
+  :root{
+    --brand:#0e8f88; --brand-dd:#0b6b64; --blue:#1b6ea8;
+    --bg:#f3f7f7; --card:#fff; --line:#e4ecec;
+    --tx:#1d2b2a; --tx2:#5b6b6a; --tx3:#90a09f;
+    --red:#e0533d; --amb:#e08a1e; --blu:#3a7bd5; --grn:#1f9d72;
+    --shadow:0 6px 22px rgba(11,107,100,.08);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--tx);line-height:1.75;font-size:15px;-webkit-font-smoothing:antialiased}
+  svg{width:1em;height:1em}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+  /* Hero */
+  .hero{background:linear-gradient(120deg,#0b6b64,#0e8f88 55%,#1b6ea8);color:#fff;padding:54px 0 60px;position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;inset:0;opacity:.12;
+    background:radial-gradient(circle at 80% 20%,#fff 0,transparent 40%),radial-gradient(circle at 60% 90%,#fff 0,transparent 35%)}
+  .hero .wrap{position:relative;z-index:1}
+  .hero h1{font-size:34px;margin:0 0 10px;font-weight:800;letter-spacing:1px}
+  .hero p{font-size:16px;opacity:.92;margin:0;max-width:680px}
+  .hero .tagrow{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+  .hero .tag{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:7px 14px;border-radius:20px;font-size:13px}
+  .hero .ver{display:inline-block;margin-top:18px;font-size:12.5px;opacity:.8}
+
+  /* Layout */
+  .layout{display:grid;grid-template-columns:240px 1fr;gap:30px;max-width:1180px;margin:30px auto;padding:0 20px;align-items:start}
+  .toc{position:sticky;top:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 12px;box-shadow:var(--shadow)}
+  .toc h4{margin:6px 8px 10px;font-size:12px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase}
+  .toc a{display:block;padding:8px 10px;border-radius:9px;color:var(--tx2);font-size:13.5px}
+  .toc a:hover{background:#eef5f4;text-decoration:none;color:var(--brand)}
+  .toc a.active{background:var(--brand);color:#fff;font-weight:600}
+  .toc .sub{padding-left:18px;font-size:12.5px;color:var(--tx3)}
+
+  .content{min-width:0}
+  section.block{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:16px}
+  section.block h2{margin:0 0 4px;font-size:23px;display:flex;align-items:center;gap:10px}
+  section.block h2 .ic{font-size:24px;color:var(--brand);background:#e8f4f3;width:38px;height:38px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
+  section.block h3{font-size:17px;margin:22px 0 8px;color:var(--brand-dd)}
+  .lead{color:var(--tx2);margin:2px 0 14px}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  code{background:#eef5f4;color:var(--brand-dd);padding:1px 7px;border-radius:6px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .kbd{background:#1d2b2a;color:#fff;padding:2px 9px;border-radius:6px;font-size:12.5px}
+
+  /* callouts */
+  .note{border-left:4px solid var(--brand);background:#eaf6f4;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;color:#14514c;font-size:14px}
+  .warn{border-left:4px solid var(--amb);background:#fdf3e6;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;color:#7a4a10;font-size:14px}
+  .tip{border-left:4px solid var(--blue);background:#eaf1f9;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;color:#13405f;font-size:14px}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#eef5f4;color:var(--brand-dd);font-weight:700}
+  tr:nth-child(even) td{background:#fafcfc}
+
+  /* mock UI chips */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#eef5f4;color:var(--brand-dd);border:1px solid #d4e8e6;padding:5px 12px;border-radius:18px;font-size:13px}
+  .chip.p0{background:#fdeae5;color:var(--red);border-color:#f6cfc4}
+  .chip.p1{background:#fdf1e0;color:var(--amb);border-color:#f6d9b3}
+  .chip.p2{background:#e9f0fb;color:var(--blu);border-color:#cfe0f7}
+  .swatch{width:13px;height:13px;border-radius:4px;display:inline-block;vertical-align:-1px;margin-right:5px}
+
+  /* steps */
+  .steps{counter-reset:s;list-style:none;padding:0;margin:14px 0}
+  .steps li{position:relative;padding:10px 0 10px 46px;border-bottom:1px dashed var(--line)}
+  .steps li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:8px;width:30px;height:30px;background:var(--brand);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .steps li:last-child{border-bottom:none}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .feat{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfdfd}
+  .feat b{color:var(--brand-dd)}
+  .footer{text-align:center;color:var(--tx3);font-size:13px;padding:30px 0 50px}
+  .top{position:fixed;right:22px;bottom:22px;width:46px;height:46px;border-radius:50%;background:var(--brand);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--shadow);display:none;z-index:9}
+  .pill{display:inline-block;font-size:12px;background:#eef5f4;color:var(--brand-dd);padding:2px 10px;border-radius:12px;margin-left:6px}
+
+  @media(max-width:860px){
+    .layout{grid-template-columns:1fr;gap:0}
+    .toc{position:static;margin-bottom:18px}
+    .toc .sub{display:none}
+    .grid2{grid-template-columns:1fr}
+    .hero h1{font-size:27px}
+    section.block{padding:20px 18px}
+    .wrap,.layout{padding:0 14px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>办公工作台 · 使用手册</h1>
+    <p>一个把「今日概览 / 待办 / 日历 / 灵感 / 项目 / 复盘」装进一个网页的个人效率工具。本手册基于产品界面编写，带你从第一次打开到用熟每一项功能。</p>
+    <div class="tagrow">
+      <span class="tag">单文件网页 · 断网可用</span>
+      <span class="tag">零依赖 · 免安装</span>
+      <span class="tag">PC + 手机响应式</span>
+      <span class="tag">本地数据 · 不上云</span>
+    </div>
+    <span class="ver">适用版本：办公工作台（含「窗口版」exe） · 最后更新 2026-08</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 目录 -->
+  <nav class="toc" id="toc">
+    <h4>目录</h4>
+    <a href="#start">快速上手</a>
+    <a href="#overview">界面总览</a>
+    <a href="#home">① 今日概览</a>
+    <a href="#todo">② 今天待办</a>
+    <a class="sub" href="#todo-new">新建任务字段</a>
+    <a class="sub" href="#todo-repeat">重复与提前提醒</a>
+    <a class="sub" href="#todo-alert">到点提醒弹框</a>
+    <a href="#cal">③ 日历</a>
+    <a href="#note">④ 灵感速记</a>
+    <a href="#proj">⑤ 项目跟进</a>
+    <a href="#review">⑥ 每周复盘</a>
+    <a href="#setting">数据与提醒设置</a>
+    <a class="sub" href="#sed">久坐提醒</a>
+    <a class="sub" href="#cfg">配置文件数据源</a>
+    <a class="sub" href="#backup">数据备份</a>
+    <a href="#multi">多端使用与同步</a>
+    <a href="#faq">常见问题</a>
+  </nav>
+
+  <div class="content">
+
+    <!-- 快速上手 -->
+    <section class="block" id="start">
+      <h2><span class="ic">⚡</span>快速上手（3 步）</h2>
+      <p class="lead">无论你拿到的是「单文件 HTML」还是「窗口版 exe」，核心体验一致。</p>
+      <ol class="steps">
+        <li><b>打开它。</b> 双击 <code>办公工作台.html</code> 用浏览器打开，或双击 <code>办公工作台-窗口版.exe</code>。首次打开会带一份示例数据，方便你直接点着看。</li>
+        <li><b>先清示例。</b> 进入「数据与提醒 → 数据备份」，点 <span class="chip">清空示例数据</span>，再开始录入你自己的内容。</li>
+        <li><b>建第一条待办。</b> 在「今天待办」点 <span class="chip">新建任务</span>，填标题、选轻重缓急、设个截止日期，保存即可。其余模块照此探索。</li>
+      </ol>
+      <div class="note">所有改动会<b>自动保存</b>到当前浏览器（或窗口版内置存储），左下角会显示「已自动保存 时:分」。无需手动点保存。</div>
+    </section>
+
+    <!-- 界面总览 -->
+    <section class="block" id="overview">
+      <h2><span class="ic">▦</span>界面总览</h2>
+      <p class="lead">左侧是导航，中间是内容区，所有功能分六大模块。</p>
+      <div class="grid2">
+        <div class="feat"><b>工作区</b><ul>
+          <li><b>今日概览</b> — 一屏看全当天重点</li>
+          <li><b>今天待办</b> — 任务清单与筛选</li>
+          <li><b>日历</b> — 日 / 周 / 月视图</li>
+        </ul></div>
+        <div class="feat"><b>积累</b><ul>
+          <li><b>灵感速记</b> — 想法 + 标签</li>
+          <li><b>项目跟进</b> — 阶段 / 下一步 / 卡点</li>
+        </ul></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="feat"><b>回顾与工具</b><ul>
+          <li><b>每周复盘</b> — 自动汇总一周成果</li>
+          <li><b>数据与提醒</b> — 提醒设置 / 配置文件 / 备份</li>
+        </ul></div>
+        <div class="feat"><b>角落信息</b><ul>
+          <li>左下角：<b>数据来源</b>（本机浏览器 / 配置文件）、已存条数、保存状态</li>
+          <li>手机端：底部出现 <b>Tab 栏</b>，含「更多」收起次级入口</li>
+        </ul></div>
+      </div>
+      <div class="tip">导航项上的小数字徽标表示待处理数量（如待办、进行中项目）。点任意模块名或底部 Tab 即可切换。</div>
+    </section>
+
+    <!-- ① 今日概览 -->
+    <section class="block" id="home">
+      <h2><span class="ic">☀</span>① 今日概览</h2>
+      <p class="lead">打开即见的驾驶舱：顶部问候 + 四项关键指标，下面把当天最重要的事铺开。</p>
+      <h3>顶部指标卡</h3>
+      <ul>
+        <li><b>今日待办</b> — 今天到期 / 逾期未完成的任务数</li>
+        <li><b>逾期顺延</b> — 昨天没做完、已被自动挪到今天的任务数</li>
+        <li><b>进行中项目</b> — 状态为「进行中」的项目数</li>
+        <li><b>本周完成率</b> — 本周已完成任务占本周全部任务的比例</li>
+      </ul>
+      <h3>卡片区</h3>
+      <ul>
+        <li><b>今天要做的</b> — 当日任务列表，可在此直接 <span class="chip">加任务</span></li>
+        <li><b>本周完成趋势</b> — 近 7 天完成数的柱状图</li>
+        <li><b>项目进度速览</b> — 各项目完成度，点「全部」进项目页</li>
+        <li><b>最近灵感</b> — 最新几条灵感，可快速 <span class="chip">速记</span></li>
+      </ul>
+      <div class="note">顶部「紧急」区会把 <span class="chip p0">P0 紧急重要</span> 且当天/逾期的任务优先置顶，提醒你先办要紧事。</div>
+    </section>
+
+    <!-- ② 今天待办 -->
+    <section class="block" id="todo">
+      <h2><span class="ic">✓</span>② 今天待办</h2>
+      <p class="lead">任务的核心管理页。支持搜索、按优先级/状态筛选、逾期顺延。</p>
+
+      <h3 id="todo-new">新建 / 编辑任务：字段说明</h3>
+      <p>点 <span class="chip">新建任务</span> 或任务上的编辑图标，弹窗包含：</p>
+      <table>
+        <tr><th>字段</th><th>说明</th><th>可选值 / 示例</th></tr>
+        <tr><td><b>标题</b></td><td>任务内容，必填</td><td>如「把续约方案定价表补齐」</td></tr>
+        <tr><td><b>轻重缓急</b></td><td>用颜色区分优先级</td><td>
+          <span class="chip p0">P0 紧急重要</span>
+          <span class="chip p1">P1 重要</span>
+          <span class="chip p2">P2 一般</span></td></tr>
+        <tr><td><b>截止日期</b></td><td>哪天要完成；留空为「无期限」</td><td><code>2026-08-15</code></td></tr>
+        <tr><td><b>提醒时间</b></td><td>当天几点提醒（HH:MM）；到点弹框 + 声音</td><td><code>09:30</code> / <code>14:00</code></td></tr>
+        <tr><td><b>提前提醒</b></td><td>相对截止时刻提前多久弹出（见下表）</td><td>不提醒 / 提前15分钟 / 提前1小时 / 提前1天 / 提前1周 等</td></tr>
+        <tr><td><b>重复</b></td><td>是否周期任务及周期（见下节）</td><td>不重复 / 每天 / 每周 / 每两周 / 每月</td></tr>
+        <tr><td><b>关联项目</b></td><td>把任务挂到某个项目下，便于归类与复盘统计</td><td>下拉选择已有项目</td></tr>
+        <tr><td><b>备注</b></td><td>补充说明</td><td>自由文本</td></tr>
+      </table>
+
+      <h3 id="todo-repeat">重复任务与提前提醒</h3>
+      <p><b>重复</b> 支持四种周期，配合「重复结束」控制收尾：</p>
+      <table>
+        <tr><th>重复</th><th>含义</th><th>重复结束方式</th></tr>
+        <tr><td>每天</td><td>每 1 天</td><td rowspan="4">一直重复 / 共 N 次 / 至某日期</td></tr>
+        <tr><td>每周</td><td>每 7 天</td></tr>
+        <tr><td>每两周</td><td>每 14 天</td></tr>
+        <tr><td>每月</td><td>每 1 个月</td></tr>
+      </table>
+      <ul>
+        <li>勾选「重复」后，<b>完成一次会自动排下一次</b>，并在页面提示「下一次排到 X 月 X 日」。</li>
+        <li>设了「共 N 次」：做完最后一轮会提示「已完成全部 N 次」并停止。</li>
+        <li>设了「至某日期」：超过该日期不再生成新实例。</li>
+      </ul>
+      <p><b>提前提醒</b> 决定提醒弹框相对「截止日 + 提醒时间」提前多久弹出：</p>
+      <div class="chips">
+        <span class="chip">不提醒</span><span class="chip">提前15分钟</span><span class="chip">提前半小时</span>
+        <span class="chip">提前1小时</span><span class="chip">提前2小时</span><span class="chip">提前1天</span><span class="chip">提前1周</span>
+      </div>
+
+      <h3 id="todo-alert">到点提醒弹框</h3>
+      <p>任务到达「提醒时刻」（截止日 + 提醒时间 − 提前量）时，页面会弹出<b>深蓝渐变提醒框</b>并播放声音：</p>
+      <ul>
+        <li>声音可自定义（见「久坐提醒 → 自定义音乐」）；在「数据与提醒」里可单独关掉<b>待办提醒声音</b>开关。</li>
+        <li>弹框提供两个操作：<span class="chip">稍后 10 分钟</span>（10 分钟后再弹）和 <span class="chip">去处理</span>（关闭弹框去办任务）。</li>
+      </ul>
+      <div class="warn">提醒依赖页面保持打开。把工作台放在一个浏览器标签常驻即可，到点会自动弹。窗口版 exe 同样支持。</div>
+
+      <h3>筛选、搜索与顺延</h3>
+      <ul>
+        <li><b>筛选</b>：全部 / 今天 / 逾期 / 未来 / 已完成 / 按 P0·P1·P2。</li>
+        <li><b>搜索</b>：顶部搜索框实时过滤任务标题。</li>
+        <li><b>逾期自动顺延</b>：昨天没做完的任务，次日打开会自动挪到今天（保留原始截止日便于查看），不会凭空消失。也可点 <span class="chip">逾期全部顺延到明天</span> 手动批量顺延。</li>
+        <li><b>勾选完成</b>：点任务前的方框标记完成；重复任务完成会自动排下一场。</li>
+      </ul>
+    </section>
+
+    <!-- ③ 日历 -->
+    <section class="block" id="cal">
+      <h2><span class="ic">▤</span>③ 日历</h2>
+      <p class="lead">日 / 周 / 月三种视图，自动展开周期任务，点某天看当天安排。</p>
+      <ul>
+        <li><b>切换视图</b>：右上角 日 / 周 / 月 分段按钮。</li>
+        <li><b>翻页</b>：<span class="kbd">‹</span> <span class="kbd">›</span> 前后翻，<span class="chip">回到今天</span> 一键回当前。</li>
+        <li><b>周期任务</b>：设了「每天 / 每周 / 每两周 / 每月」的任务会在对应日期自动出现（虚线标记为衍生实例）。</li>
+        <li><b>当天安排</b>：点任意日期，下方「当天安排」列出该日任务及提醒标签。</li>
+        <li>在日历页也可 <span class="chip">新建</span> 任务，默认带入所选日期。</li>
+      </ul>
+    </section>
+
+    <!-- ④ 灵感速记 -->
+    <section class="block" id="note">
+      <h2><span class="ic">💡</span>④ 灵感速记</h2>
+      <p class="lead">想到就记，用标签归位，事后好找。</p>
+      <ul>
+        <li><b>记一条</b>：点 <span class="chip">记一条</span>，填内容与标签（多个标签用空格或逗号分隔）。</li>
+        <li><b>标签筛选</b>：顶部标签云，点标签只看该类灵感。</li>
+        <li><b>搜索</b>：按内容或标签实时搜索。</li>
+        <li>灵感与任务、项目相互独立，适合存放碎片想法、金句、素材。</li>
+      </ul>
+      <div class="tip">小技巧：把灵感当作「素材库」，写周报或方案时来这翻，常有现成句子可用。</div>
+    </section>
+
+    <!-- ⑤ 项目跟进 -->
+    <section class="block" id="proj">
+      <h2><span class="ic">❒</span>⑤ 项目跟进</h2>
+      <p class="lead">用「现在到哪 / 下一步 / 卡点」三句话管理法，让项目状态一目了然。</p>
+      <table>
+        <tr><th>字段</th><th>作用</th></tr>
+        <tr><td><b>项目名</b></td><td>项目标题</td></tr>
+        <tr><td><b>现在到哪一步</b></td><td>当前进展描述</td></tr>
+        <tr><td><b>下一步</b></td><td>接下来要做的动作（最具体越好）</td></tr>
+        <tr><td><b>卡点</b></td><td>被什么挡住了（用于复盘「卡点汇总」）</td></tr>
+        <tr><td><b>状态</b></td><td>进行中 / 卡住了 / 已完成（归档）</td></tr>
+      </table>
+      <ul>
+        <li><b>与待办关联</b>：在待办里选「关联项目」，该项目卡会显示<b>完成度</b>（已完成任务数 / 总任务数）和未完成数、逾期数。</li>
+        <li><b>重载不丢关联</b>：从配置文件重新加载后，待办与项目的关联关系稳定保留。</li>
+        <li><b>显示已归档</b>：默认隐藏「已完成」项目，点此可查看。</li>
+        <li><b>删除项目</b>：关联任务会保留，只是不再挂在项目下（不会误删任务）。</li>
+      </ul>
+    </section>
+
+    <!-- ⑥ 每周复盘 -->
+    <section class="block" id="review">
+      <h2><span class="ic">📊</span>⑥ 每周复盘</h2>
+      <p class="lead">自动汇总选定一周的成果，省去手算。可前后翻周、复制成文。</p>
+      <ul>
+        <li><b>翻周</b>：上一周 / 下一周 / 本周。</li>
+        <li><b>关键指标</b>：完成数、完成率、逾期数、关联项目数等。</li>
+        <li><b>优先级分布</b>：本周完成任务中 P0/P1/P2 占比（饼图）。</li>
+        <li><b>每天完成情况</b>：一周七天的完成柱状图。</li>
+        <li><b>精力花在哪些项目</b>：按完成任务数排序的项目分布。</li>
+        <li><b>卡点汇总</b>：本周项目里记录的卡点集中呈现。</li>
+        <li><b>本周完成清单</b>：逐条列出已完成任务。</li>
+        <li><b>复制复盘文本</b>：一键复制纯文本版，方便粘到周报 / 群里汇报。</li>
+      </ul>
+      <div class="note">复盘数据来自任务/项目的「完成时间」与「状态」，平时记好，周末直接出成果。</div>
+    </section>
+
+    <!-- 数据与提醒设置 -->
+    <section class="block" id="setting">
+      <h2><span class="ic">⚙</span>数据与提醒设置</h2>
+      <p class="lead">这一页集中管理提醒、数据源与备份。</p>
+
+      <h3 id="sed">久坐提醒</h3>
+      <p>按设定间隔弹出休息提示，保护颈椎和眼睛。</p>
+      <ul>
+        <li><b>开关</b>：右侧拨动开启 / 关闭。</li>
+        <li><b>间隔预设</b>：25 / 30 / 45 / 60 / 90 分钟；也可在「自定义间隔」填任意分钟（1–600）。</li>
+        <li><b>休息时长</b>：到点提醒你休息几分钟（1–60）。</li>
+        <li><b>重新计时</b>：刚起身过，点它重置计时。</li>
+        <li><b>试一下提醒</b>：立即弹出休息框，预览效果。</li>
+        <li><b>提示音</b>：开关内置五声音阶轻音乐提示。</li>
+        <li><b>选择音乐文件</b>：用本地音乐（mp3 / wav / ogg / m4a / aac / flac）作提醒音；选后显示文件名，<span class="chip">清除</span> 回到内置旋律。文件较大（&gt;3MB）会提示。</li>
+        <li><b>计数器</b>：今日已提醒次数、累计起身次数。</li>
+      </ul>
+      <div class="tip">休息弹框点「休息 N 分钟，我回来了」关闭并记一次起身；不点则到点自动关闭。提示音与待办提醒声音相互独立。</div>
+
+      <h3>待办到点提醒开关</h3>
+      <p>在久坐提醒卡片底部，有「待办到点提醒：设置了提醒时间的任务，到点弹窗提醒」说明，旁边 <b>声音</b> 开关可单独关闭待办提醒的声音（弹框仍保留）。</p>
+
+      <h3 id="cfg">配置文件数据源</h3>
+      <p>把页面数据<b>实时绑定</b>到一个本地 Excel / JSON 文件，实现多端共享同一份数据。</p>
+      <ol class="steps">
+        <li>在「数据与提醒 → 配置文件数据源」点 <span class="chip">配置文件…</span>。</li>
+        <li>选择一个 <code>.xlsx</code> 或 <code>.json</code> 文件（窗口版 exe 弹出系统文件框；HTML 版用浏览器选择）。</li>
+        <li>绑定后，所有改动<b>实时写回</b>该文件；在 Excel / 记事本里改了内容，回页面点「重新加载」即可刷新。</li>
+        <li>把配置文件放进 OneDrive / 同步盘，多台设备自动同步数据。</li>
+      </ol>
+      <div class="warn">绑定配置文件后，数据以该文件为权威来源，浏览器内的旧数据会被覆盖。建议先用「数据备份」导出一份再绑定。</div>
+      <div class="note">导出的 xlsx 含「待办 / 灵感 / 项目 / 设置」四张表，可直接在 Excel 查看；文件内另存完整数据，导入不限条数。</div>
+
+      <h3 id="backup">数据备份</h3>
+      <ul>
+        <li><b>导出备份（Excel）</b>：生成 <code>.xlsx</code>，含四张表 + 完整数据，用于换机 / 换浏览器恢复。</li>
+        <li><b>导入恢复</b>：选一个之前导出的 xlsx / json，原样恢复（含待办-项目关联）。</li>
+        <li><b>导出 JSON</b>：导出完整结构化数据，便于程序化处理或版本管理。</li>
+        <li><b>清空示例数据</b>：删掉首次打开的演示内容。</li>
+        <li><b>清空全部数据</b>：<span class="chip" style="background:#fdeae5;color:#e0533d;border-color:#f6cfc4">危险</span> 清空所有任务/灵感/项目，不可恢复，操作前请先导出。</li>
+      </ul>
+      <div class="warn">数据默认只存在<b>当前这台设备的这个浏览器</b>。清浏览器数据、换设备、换浏览器都会看不到旧数据 —— 请定期导出 Excel 备份。</div>
+
+      <h3>关于</h3>
+      <ul>
+        <li>单文件网页，全部资源内联，<b>断网可用</b>，不向任何服务器发送数据。</li>
+        <li>手机：用手机浏览器打开本页 → 分享 / 菜单 → <b>添加到主屏幕</b>，即可像 App 一样使用。</li>
+      </ul>
+    </section>
+
+    <!-- 多端使用 -->
+    <section class="block" id="multi">
+      <h2><span class="ic">🔗</span>多端使用与同步</h2>
+      <p class="lead">两种形态，按场景选择；同步方式各不同。</p>
+      <div class="grid2">
+        <div class="feat">
+          <b>窗口版 exe（推荐电脑常驻）</b>
+          <ul>
+            <li>双击 <code>办公工作台-窗口版.exe</code> 打开，独立窗口、内嵌图标。</li>
+            <li>打开后主界面会显示本机局域网地址（如 <code>http://192.168.x.x:9876</code>）。</li>
+            <li><b>手机实时同步</b>：手机连同一 WiFi，浏览器打开该地址，即可看到与电脑<b>同一份、实时更新</b>的数据（C# 服务端作共享数据权威源）。</li>
+            <li>支持用系统文件框选择配置文件 / 音乐文件。</li>
+          </ul>
+        </div>
+        <div class="feat">
+          <b>单文件 HTML（最轻便）</b>
+          <ul>
+            <li>双击 <code>办公工作台.html</code> 用任意浏览器打开。</li>
+            <li>手机：浏览器打开 → 添加到主屏幕，像 App 使用。</li>
+            <li>电脑与手机数据<b>各自独立</b>，用「导出 / 导入」在设备间搬运。</li>
+            <li>配置文件数据源同样可用（选本地文件）。</li>
+          </ul>
+        </div>
+      </div>
+      <table>
+        <tr><th>场景</th><th>推荐形态</th><th>同步方式</th></tr>
+        <tr><td>电脑日常办公</td><td>窗口版 exe</td><td>手机扫局域网地址实时同步</td></tr>
+        <tr><td>临时 / 公用电脑</td><td>单文件 HTML（U 盘携带）</td><td>导出导入</td></tr>
+        <tr><td>多设备长期协作</td><td>任一形态 + 配置文件放同步盘</td><td>文件实时读写</td></tr>
+      </table>
+      <div class="tip">想让多台电脑都实时同步？把「配置文件数据源」指向 OneDrive / 同步盘里的文件，所有设备打开同一文件即可。</div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="block" id="faq">
+      <h2><span class="ic">？</span>常见问题</h2>
+      <h3>数据存在哪？安全吗？</h3>
+      <p>默认存在当前浏览器本地（窗口版在内置存储），<b>不上传任何服务器</b>。换浏览器 / 清缓存 / 换设备会看不到，记得定期导出备份。</p>
+      <h3>逾期任务去哪了？</h3>
+      <p>不会消失。次日打开会自动顺延到今天，并保留原始截止日；也可手动「逾期全部顺延到明天」。</p>
+      <h3>重复任务怎么停？</h3>
+      <p>设「共 N 次」做完即停；设「至某日期」到期停；或把任务标记为完成且不再生成下一次。也可直接删除。</p>
+      <h3>待办提醒没弹？</h3>
+      <p>确认：①任务设了「提醒时间」；②页面标签保持打开；③「数据与提醒」里待办提醒声音/弹框未被关闭。窗口版同理。</p>
+      <h3>换电脑如何带走数据？</h3>
+      <p>「数据与提醒 → 数据备份 → 导出备份（Excel）」存一份，到新电脑「导入恢复」即可；或绑定同步盘里的配置文件。</p>
+      <h3>自定义音乐不响？</h3>
+      <p>检查文件格式（mp3 / wav / ogg 等受浏览器支持）；文件过大（&gt;3MB）可能未保存；点「清除」可回退内置旋律验证。</p>
+    </section>
+
+    <div class="footer">办公工作台 · 使用手册 &nbsp;|&nbsp; 基于产品界面编写 &nbsp;|&nbsp; 单文件、断网可用、数据本地</div>
+  </div>
+</div>
+
+<button class="top" id="topBtn" title="回到顶部">↑</button>
+
+<script>
+  // 目录高亮 + 回到顶部
+  const links=[...document.querySelectorAll('.toc a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  const spy=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){
+      const id='#'+e.target.id;
+      links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')===id));
+    }});
+  },{rootMargin:'-10% 0px -80% 0px'});
+  secs.forEach(s=>s&&spy.observe(s));
+  const top=document.getElementById('topBtn');
+  addEventListener('scroll',()=>{top.style.display=scrollY>500?'block':'none';});
+  top.onclick=()=>scrollTo({top:0,behavior:'smooth'});
+</script>
+</body>
+</html>

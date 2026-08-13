@@ -17,6 +17,7 @@ app/gui/out*/
 # 单文件应用构建产物（由 src/ + build.js 生成）
 app/gui/app.html
 app/cs/app.html
+/办公工作台.html
 # 图标二进制资源
 app/gui/icon.png
 app/gui/app.ico
