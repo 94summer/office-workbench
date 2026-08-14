@@ -18,7 +18,14 @@ const ServerSync=(function(){
       try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}
       DB=db;load();localRev=rev;hasServerDb=true;renderAll();
     }
-    if(CONFIG_BIND)push();   // 只有绑定了配置文件的客户端（PC）负责把文件数据发布到服务端
+    else if(localStorage.getItem(KEY)){
+      /* 服务端尚无数据：把本地（WebView2 / 浏览器 localStorage）已有数据作为种子发布到服务端，
+         使 /api/weekly 等对外接口也能读到 PC 主机的真实数据（即使未绑定配置文件）。
+         主引导已 load() 过，DB 已是本地数据；保险起见再确认一次本地确有真实任务。 */
+      try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);if(d&&d.tasks&&d.tasks.length)DB=d;}}catch(e){}
+      push();
+    }
+    if(CONFIG_BIND)push();   // 绑定了配置文件的客户端（PC）持续把文件数据发布到服务端
     startPoll();             // 所有客户端都拉取，保持实时同步
   }
   /* 保存时调用：把当前整库推送到服务端（服务端自增修订号，返回新 rev） */
