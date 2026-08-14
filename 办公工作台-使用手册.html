@@ -132,6 +132,7 @@
     <a class="sub" href="#cfg">配置文件数据源</a>
     <a class="sub" href="#backup">数据备份</a>
     <a href="#multi">多端使用与同步</a>
+    <a href="#api">对外 API（对接外部软件）</a>
     <a href="#faq">常见问题</a>
   </nav>
 
@@ -418,6 +419,43 @@
       <p>「数据与提醒 → 数据备份 → 导出备份（Excel）」存一份，到新电脑「导入恢复」即可；或绑定同步盘里的配置文件。</p>
       <h3>自定义音乐不响？</h3>
       <p>检查文件格式（mp3 / wav / ogg 等受浏览器支持）；文件过大（&gt;3MB）可能未保存；点「清除」可回退内置旋律验证。</p>
+    </section>
+
+    <!-- 对外 API -->
+    <section class="block" id="api">
+      <h2><span class="ic">🔌</span>对外 API（对接外部软件）</h2>
+      <p class="lead">窗口版 exe 内置本地 HTTP 服务，外部软件 / 脚本可读取<b>本周完成清单</b>与<b>复盘文本</b>，方便自动归档或转发到周报、IM、知识库等系统。</p>
+
+      <h3>接口与参数</h3>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td><b>地址</b></td><td><code>GET http://&lt;本机IP或localhost&gt;:9876/api/weekly</code>（端口默认 9876，被占用会顺延并在标题栏提示）</td></tr>
+        <tr><td><b>format</b></td><td><code>json</code>（默认）/ <code>md</code> / <code>txt</code> —— 结构化 JSON / Markdown 文档 / 纯文本复盘</td></tr>
+        <tr><td><b>week</b></td><td>可选，填某周内任意日期（不必周一），自动取所在周周一；缺省为当前周</td></tr>
+      </table>
+
+      <h3>三种返回格式</h3>
+      <ul>
+        <li><b>json</b>：含 <code>week</code>、<code>summary</code>（完成数 / 完成率等）、<code>priorityDistribution</code>、<code>energyDistribution</code>、<code>completionList</code>（本周完成清单）、<code>blockers</code>、<code>dragged</code>（反复拖延）、<code>reviewText</code>（复盘文本）。</li>
+        <li><b>md</b>：一份 Markdown 文档（完成情况 / 精力分布 / 完成清单 / 卡点 / 反复拖延），可直接落盘或转发。</li>
+        <li><b>txt</b>：纯文本复盘，即 <code>reviewText</code> 内容，可直接写入文件。</li>
+      </ul>
+
+      <h3>快速上手示例</h3>
+      <div class="chips">
+        <span class="chip">curl http://localhost:9876/api/weekly</span>
+        <span class="chip">?format=md</span>
+        <span class="chip">?format=txt</span>
+        <span class="chip">?week=2026-08-10</span>
+      </div>
+      <pre style="background:#0d1f1e;color:#d6f3ee;padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px"><code># 取 Markdown 复盘并落盘
+curl "http://localhost:9876/api/weekly?format=md" -o 周复盘.md
+
+# 取纯文本
+curl "http://localhost:9876/api/weekly?format=txt"</code></pre>
+
+      <div class="note">接口已开启跨域（<code>Access-Control-Allow-Origin: *</code>），浏览器内运行的外部页面也能直接 <code>fetch</code> 调用。详细字段与 Python 示例见仓库内 <b>API说明.md</b>。</div>
+      <div class="warn">当前接口<b>无鉴权</b>，仅用于本机 / 局域网内部工具。需暴露公网请自行加反向代理与鉴权。单文件 HTML 版不含本服务，仅窗口版 exe 提供。</div>
     </section>
 
     <div class="footer">办公工作台 · 使用手册 &nbsp;|&nbsp; 基于产品界面编写 &nbsp;|&nbsp; 单文件、断网可用、数据本地</div>

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.Json;
@@ -155,9 +156,194 @@ static class Program
         catch { }
     }
 
+    /* ==================== 周复盘 API（供外部软件获取本周完成清单 / 复盘文本） ==================== */
+    static string Ymd(DateTime d) => d.ToString("yyyy-MM-dd");
+    static DateTime? ParseD(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return null;
+        var p = s.Split('-');
+        if (p.Length < 3) return null;
+        if (!int.TryParse(p[0], out var y) || !int.TryParse(p[1], out var m) || !int.TryParse(p[2], out var d)) return null;
+        try { return new DateTime(y, m, d); } catch { return null; }
+    }
+    static string AddDays(string s, int n) { var d = ParseD(s) ?? DateTime.Today; d = d.AddDays(n); return Ymd(d); }
+    static string MondayOf(string s) { var d = ParseD(s) ?? DateTime.Today; int w = ((int)d.DayOfWeek + 6) % 7; d = d.AddDays(-w); return Ymd(d); }
+    static string TodayStr() { return Ymd(DateTime.Today); }
+
+    static (string body, string contentType) BuildWeeklyReview(string path)
+    {
+        string format = "json"; string weekParam = null;
+        int qi = path.IndexOf('?');
+        if (qi >= 0)
+        {
+            foreach (var kv in path.Substring(qi + 1).Split('&'))
+            {
+                var parts = kv.Split('=');
+                if (parts.Length < 2) continue;
+                var k = Uri.UnescapeDataString(parts[0]).ToLower();
+                var v = Uri.UnescapeDataString(parts[1]);
+                if (k == "format") format = v.ToLower();
+                else if (k == "week") weekParam = v;
+            }
+        }
+        string mon = MondayOf(string.IsNullOrEmpty(weekParam) ? TodayStr() : weekParam);
+        string dbJson;
+        lock (_srvLock) { dbJson = _dbJson; }
+
+        var tasks = new List<JsonElement>();
+        var projects = new List<JsonElement>();
+        var notes = new List<JsonElement>();
+        if (!string.IsNullOrEmpty(dbJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(dbJson);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("tasks", out var t)) foreach (var x in t.EnumerateArray()) tasks.Add(x.Clone());
+                if (root.TryGetProperty("projects", out var p)) foreach (var x in p.EnumerateArray()) projects.Add(x.Clone());
+                if (root.TryGetProperty("notes", out var n)) foreach (var x in n.EnumerateArray()) notes.Add(x.Clone());
+            }
+            catch { }
+        }
+
+        var projMap = new Dictionary<string, (string name, string status, string blocker, string next)>();
+        foreach (var p in projects)
+        {
+            var id = p.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            if (id == null) continue;
+            projMap[id] = (
+                p.TryGetProperty("name", out var ne) ? ne.GetString() : "",
+                p.TryGetProperty("status", out var se) ? se.GetString() : "active",
+                p.TryGetProperty("blocker", out var be) ? be.GetString() : "",
+                p.TryGetProperty("next", out var ne2) ? ne2.GetString() : ""
+            );
+        }
+
+        var days = new List<string>();
+        for (int i = 0; i < 7; i++) days.Add(AddDays(mon, i));
+        var daySet = new HashSet<string>(days);
+
+        var doneList = new List<(string title, string pri, string doneAt, string projName)>();
+        foreach (var t in tasks)
+        {
+            bool done = t.TryGetProperty("done", out var de) && de.ValueKind == JsonValueKind.True;
+            var doneAt = t.TryGetProperty("doneAt", out var dae) ? dae.GetString() : null;
+            if (done && !string.IsNullOrEmpty(doneAt) && daySet.Contains(doneAt))
+            {
+                var title = t.TryGetProperty("title", out var te) ? te.GetString() : "(无标题)";
+                var pri = t.TryGetProperty("pri", out var pe) ? pe.GetString() : "P2";
+                var pid = t.TryGetProperty("projectId", out var pide) ? pide.GetString() : null;
+                string pn = "零散事项";
+                if (!string.IsNullOrEmpty(pid))
+                {
+                    if (projMap.TryGetValue(pid, out var pm)) pn = pm.name;
+                    else pn = "已删除项目";
+                }
+                doneList.Add((title, pri, doneAt, pn));
+            }
+        }
+        int doneCount = doneList.Count;
+        int createdCount = 0;
+        foreach (var t in tasks) { var ca = t.TryGetProperty("createdAt", out var ce) ? ce.GetString() : null; if (!string.IsNullOrEmpty(ca) && daySet.Contains(ca.Length >= 10 ? ca.Substring(0, 10) : ca)) createdCount++; }
+        int openCount = 0;
+        foreach (var t in tasks) { bool done2 = t.TryGetProperty("done", out var d2) && d2.ValueKind == JsonValueKind.True; var due = t.TryGetProperty("due", out var ue) ? ue.GetString() : null; if (!done2 && !string.IsNullOrEmpty(due) && string.Compare(due, days[6]) <= 0) openCount++; }
+        int pct = (doneCount + openCount) > 0 ? (int)Math.Round((double)doneCount / (doneCount + openCount) * 100) : 0;
+        int p0 = 0, p1 = 0, p2 = 0;
+        foreach (var d in doneList) { if (d.pri == "P0") p0++; else if (d.pri == "P1") p1++; else p2++; }
+        int noteCount = 0;
+        foreach (var n in notes) { var ca = n.TryGetProperty("createdAt", out var ce) ? ce.GetString() : null; if (!string.IsNullOrEmpty(ca)) { var ds = ca.Length >= 10 ? ca.Substring(0, 10) : ca; if (daySet.Contains(ds)) noteCount++; } }
+        var blockers = new List<(string name, string blocker, string next)>();
+        foreach (var p in projects) { var st = p.TryGetProperty("status", out var se) ? se.GetString() : "active"; var bl = p.TryGetProperty("blocker", out var be) ? be.GetString() : ""; if (!string.IsNullOrEmpty(bl) && st != "done") blockers.Add((p.TryGetProperty("name", out var ne) ? ne.GetString() : "(未命名)", bl, p.TryGetProperty("next", out var ne2) ? ne2.GetString() : "")); }
+        var rolled = new List<(string title, int rc)>();
+        foreach (var t in tasks) { bool done3 = t.TryGetProperty("done", out var d3) && d3.ValueKind == JsonValueKind.True; int rc = t.TryGetProperty("rollCount", out var re) ? (re.TryGetInt32(out var ri) ? ri : 0) : 0; if (!done3 && rc >= 2) rolled.Add((t.TryGetProperty("title", out var te) ? te.GetString() : "(无标题)", rc)); }
+        var pm2 = new Dictionary<string, int>();
+        foreach (var d in doneList) pm2[d.projName] = (pm2.ContainsKey(d.projName) ? pm2[d.projName] : 0) + 1;
+        var energy = pm2.OrderByDescending(x => x.Value).ToList();
+        bool isCurrent = mon == MondayOf(TodayStr());
+
+        string reviewText = BuildReviewText(mon, days[6], doneCount, pct, openCount, p0, p1, p2, doneList, blockers, rolled);
+
+        if (format == "txt")
+            return (reviewText, "text/plain; charset=utf-8");
+        if (format == "md")
+            return (BuildReviewMarkdown(mon, days[6], isCurrent, doneCount, pct, openCount, createdCount, noteCount, blockers.Count, rolled.Count, p0, p1, p2, energy, doneList, blockers, rolled), "text/markdown; charset=utf-8");
+
+        string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
+        var sb = new StringBuilder();
+        sb.Append('{');
+        sb.Append("\"week\":" + JsonString(mon));
+        sb.Append(",\"range\":{\"start\":" + JsonString(mon) + ",\"end\":" + JsonString(days[6]) + "}");
+        sb.Append(",\"isCurrentWeek\":" + isCurrent.ToString().ToLower());
+        sb.Append(",\"summary\":{\"done\":" + doneCount + ",\"completionRate\":" + pct + ",\"created\":" + createdCount + ",\"open\":" + openCount + ",\"notes\":" + noteCount + ",\"blockedProjects\":" + blockers.Count + ",\"rolledTasks\":" + rolled.Count + "}");
+        sb.Append(",\"priorityDistribution\":{\"P0\":" + p0 + ",\"P1\":" + p1 + ",\"P2\":" + p2 + "}");
+        sb.Append(",\"energyDistribution\":[");
+        bool firstE = true;
+        foreach (var e in energy) { if (!firstE) sb.Append(','); firstE = false; int pc2 = doneCount > 0 ? (int)Math.Round((double)e.Value / doneCount * 100) : 0; sb.Append("{\"project\":" + JsonString(e.Key) + ",\"count\":" + e.Value + ",\"percent\":" + pc2 + "}"); }
+        sb.Append(']');
+        sb.Append(",\"completionList\":[");
+        bool firstC = true;
+        foreach (var d in doneList) { if (!firstC) sb.Append(','); firstC = false; sb.Append("{\"title\":" + JsonString(d.title) + ",\"priority\":" + JsonString(d.pri) + ",\"priorityLabel\":" + JsonString(PriLabel(d.pri)) + ",\"doneAt\":" + JsonString(d.doneAt) + ",\"project\":" + JsonString(d.projName) + "}"); }
+        sb.Append(']');
+        sb.Append(",\"blockers\":[");
+        bool firstB = true;
+        foreach (var b in blockers) { if (!firstB) sb.Append(','); firstB = false; sb.Append("{\"project\":" + JsonString(b.name) + ",\"blocker\":" + JsonString(b.blocker) + ",\"next\":" + JsonString(b.next) + "}"); }
+        sb.Append(']');
+        sb.Append(",\"dragged\":[");
+        bool firstR = true;
+        foreach (var r in rolled) { if (!firstR) sb.Append(','); firstR = false; sb.Append("{\"title\":" + JsonString(r.title) + ",\"rollCount\":" + r.rc + "}"); }
+        sb.Append(']');
+        sb.Append(",\"reviewText\":" + JsonString(reviewText));
+        sb.Append('}');
+        return (sb.ToString(), "application/json; charset=utf-8");
+    }
+
+    static string BuildReviewText(string mon, string end, int done, int pct, int open, int p0, int p1, int p2, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled)
+    {
+        string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
+        var s = new StringBuilder();
+        s.Append("【周复盘】" + mon + " ~ " + end + "\n\n");
+        s.Append("一、完成情况\n共完成 " + done + " 件，完成率 " + pct + "%，未完成 " + open + " 件。\n");
+        s.Append("优先级分布：紧急重要 " + p0 + " 件 / 重要 " + p1 + " 件 / 一般 " + p2 + " 件。\n\n");
+        var pm = new Dictionary<string, int>();
+        foreach (var d in list) { var k = d.projName; pm[k] = (pm.ContainsKey(k) ? pm[k] : 0) + 1; }
+        s.Append("二、精力分布\n");
+        foreach (var e in pm.OrderByDescending(x => x.Value)) s.Append("· " + e.Key + "：" + e.Value + " 件\n");
+        s.Append("\n");
+        s.Append("三、完成清单\n");
+        if (list.Count == 0) s.Append("· 无\n");
+        else foreach (var d in list) s.Append("· " + d.title + "（" + PriLabel(d.pri) + "）\n");
+        s.Append("\n");
+        s.Append("四、卡点\n");
+        if (blockers.Count == 0) s.Append("· 无\n");
+        else foreach (var b in blockers) s.Append("· " + b.name + "：" + b.blocker + "｜下一步：" + (string.IsNullOrEmpty(b.next) ? "待定" : b.next) + "\n");
+        if (rolled.Count > 0) { s.Append("\n五、反复拖延\n"); foreach (var r in rolled) s.Append("· " + r.title + "（顺延 " + r.rc + " 次）\n"); }
+        return s.ToString();
+    }
+
+    static string BuildReviewMarkdown(string mon, string end, bool isCurrent, int done, int pct, int open, int created, int notes, int blocked, int rolledCnt, int p0, int p1, int p2, List<KeyValuePair<string, int>> energy, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled)
+    {
+        string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
+        var s = new StringBuilder();
+        s.Append("# 周复盘 " + mon + " ~ " + end + (isCurrent ? "（本周）" : "") + "\n\n");
+        s.Append("## 一、完成情况\n\n");
+        s.Append("- 共完成 **" + done + "** 件，完成率 **" + pct + "%**，未完成 " + open + " 件\n");
+        s.Append("- 本周新建 " + created + " 件，记录灵感 " + notes + " 条，卡住项目 " + blocked + " 个，反复拖延 " + rolledCnt + " 件\n");
+        s.Append("- 优先级分布：紧急重要 " + p0 + " 件 / 重要 " + p1 + " 件 / 一般 " + p2 + " 件\n\n");
+        s.Append("## 二、精力分布\n\n");
+        foreach (var e in energy) s.Append("- " + e.Key + "：" + e.Value + " 件\n");
+        s.Append("\n## 三、本周完成清单\n\n");
+        if (list.Count == 0) s.Append("- （无）\n");
+        else foreach (var d in list) s.Append("- " + d.title + "（" + PriLabel(d.pri) + (d.projName == "零散事项" ? "" : "，" + d.projName) + "）— " + d.doneAt + "\n");
+        s.Append("\n## 四、卡点\n\n");
+        if (blockers.Count == 0) s.Append("- （无）\n");
+        else foreach (var b in blockers) s.Append("- **" + b.name + "**：" + b.blocker + " ｜ 下一步：" + (string.IsNullOrEmpty(b.next) ? "待定" : b.next) + "\n");
+        if (rolled.Count > 0) { s.Append("\n## 五、反复拖延\n\n"); foreach (var r in rolled) s.Append("- " + r.title + "（顺延 " + r.rc + " 次）\n"); }
+        return s.ToString();
+    }
+
     static async Task HandleApi(NetworkStream ns, string method, string path, string body)
     {
-        string resp = "{}"; int code = 200;
+        string resp = "{}"; int code = 200; string respType = "application/json; charset=utf-8";
         try
         {
             if (path.Equals("/api/state", StringComparison.OrdinalIgnoreCase))
@@ -207,12 +393,17 @@ static class Program
                 SaveServerConfig();
                 resp = "{\"ok\":true}";
             }
+            else if (path.StartsWith("/api/weekly", StringComparison.OrdinalIgnoreCase))
+            {
+                var r = BuildWeeklyReview(path);
+                resp = r.body; respType = r.contentType;
+            }
             else { resp = "{\"ok\":false,\"error\":\"not found\"}"; code = 404; }
         }
         catch (Exception ex) { resp = "{\"ok\":false,\"error\":" + JsonString(ex.Message) + "}"; code = 500; }
         var rb = Encoding.UTF8.GetBytes(resp);
-        var header = "HTTP/1.1 " + code + " OK\r\nContent-Type: application/json; charset=utf-8\r\n"
-            + "Cache-Control: no-store\r\nContent-Length: " + rb.Length + "\r\nConnection: close\r\n\r\n";
+        var header = "HTTP/1.1 " + code + " OK\r\nContent-Type: " + respType + "\r\n"
+            + "Access-Control-Allow-Origin: *\r\nCache-Control: no-store\r\nContent-Length: " + rb.Length + "\r\nConnection: close\r\n\r\n";
         var hb = Encoding.ASCII.GetBytes(header);
         await ns.WriteAsync(hb, 0, hb.Length);
         await ns.WriteAsync(rb, 0, rb.Length);
