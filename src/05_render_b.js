@@ -182,7 +182,38 @@ function renderReview(){
       <span class="tag grn">${(t.doneAt||'').slice(5)} 完成</span>
       ${p?`<span class="tag brd">${esc(p.name)}</span>`:''}</div></div></div>`}).join('')
     :`<div class="empty"><svg class="ic"><use href="#i-inbox"/></svg><div>这周还没有完成的任务</div></div>`;
+
+  /* 下周工作计划（未完成待办自动汇总） */
+  const np=nextWeekPlan();
+  const planItem=t=>{const p=projOf(t.projectId);const od=t.due&&t.due<TODAY();
+    return `<div style="display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line-s)">
+      <span class="pdot ${PRI[t.pri].k}" style="margin-top:5px;flex:none"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;${od?'color:var(--red);font-weight:600':''}">${esc(t.title)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:3px">
+          <span class="tag ${PRI[t.pri].c}">${PRI[t.pri].t}</span>
+          ${t.due?`<span class="tag ${od?'red':'brd'}">${humanDate(t.due)}</span>`:'<span class="tag">未排期</span>'}
+          ${p?`<span class="tag brd">${esc(p.name)}</span>`:''}
+        </div>
+      </div></div>`;};
+  $('#revPlan').innerHTML=np.total
+    ? (np.overdue.length?`<div style="margin-bottom:8px"><b style="color:var(--red);font-size:12.5px">逾期未完成（${np.overdue.length}）</b>${np.overdue.map(planItem).join('')}</div>`:'')
+      +(np.sched.length?`<div style="margin-bottom:8px"><b style="font-size:12.5px;color:#1b6ea8">下周排期（${np.sched.length}）</b>${np.sched.map(planItem).join('')}</div>`:'')
+      +(np.unsched.length?`<div><b style="font-size:12.5px">未排期（${np.unsched.length}）</b>${np.unsched.map(planItem).join('')}</div>`:'')
+    : `<div class="empty"><svg class="ic"><use href="#i-check-sq"/></svg><div>下周没有待办，轻松一周</div></div>`;
 }
+/* 下周工作计划：未完成待办按「逾期 / 下周排期 / 未排期」分组 */
+function nextWeekPlan(){
+  const today=TODAY();
+  const nxtMon=addDays(revWeek,7), nxtSun=addDays(revWeek,13);
+  const open=DB.tasks.filter(t=>!t.done);
+  const byDue=(a,b)=>(a.due||'9999-12-31').localeCompare(b.due||'9999-12-31');
+  const overdue=open.filter(t=>t.due&&t.due<today).sort(byDue);                              // 逾期遗留：必然要排进下周
+  const sched=open.filter(t=>t.due&&t.due>=nxtMon&&t.due<=nxtSun).sort(byDue);                  // 下周排期：截止日落在下周
+  const unsched=open.filter(t=>!t.due||t.due==='').sort((a,b)=>a.pri.localeCompare(b.pri));      // 未排期：无截止日，作为下周 backlog
+  return {overdue,sched,unsched,total:overdue.length+sched.length+unsched.length};
+}
+function projNameOf(id){const p=projOf(id);return p?p.name:'零散事项';}
 function reviewText(){
   const w=weekStats(revWeek);const pc={P0:0,P1:0,P2:0};w.list.forEach(t=>pc[t.pri]++);
   const pm={};w.list.forEach(t=>{const k=t.projectId?(projOf(t.projectId)||{}).name||'其他':'零散事项';pm[k]=(pm[k]||0)+1;});
@@ -193,8 +224,15 @@ function reviewText(){
   s+=`三、完成清单\n`+(w.list.map(t=>`· ${t.title}（${PRI[t.pri].t}）`).join('\n')||'· 无')+'\n\n';
   const bl=DB.projects.filter(p=>p.blocker&&p.status!=='done');
   s+=`四、卡点\n`+(bl.map(p=>`· ${p.name}：${p.blocker}｜下一步：${p.next||'待定'}`).join('\n')||'· 无')+'\n';
+  const np=nextWeekPlan();
+  s+=`五、下周工作计划\n`;
+  if(np.total){
+    if(np.overdue.length)s+=`· 逾期未完成（${np.overdue.length} 件）\n`+np.overdue.map(t=>`  - ${t.title}（${PRI[t.pri].t}）｜截止 ${md(t.due)}｜${projNameOf(t.projectId)}`).join('\n')+'\n';
+    if(np.sched.length)s+=`· 下周排期（${np.sched.length} 件）\n`+np.sched.map(t=>`  - ${t.title}（${PRI[t.pri].t}）｜截止 ${md(t.due)}｜${projNameOf(t.projectId)}`).join('\n')+'\n';
+    if(np.unsched.length)s+=`· 未排期（${np.unsched.length} 件）\n`+np.unsched.map(t=>`  - ${t.title}（${PRI[t.pri].t}）｜${projNameOf(t.projectId)}`).join('\n')+'\n';
+  }else s+='· 无\n';
   const st=w.rolled.filter(t=>(t.rollCount||0)>=2);
-  if(st.length)s+=`\n五、反复拖延\n`+st.map(t=>`· ${t.title}（顺延 ${t.rollCount} 次）`).join('\n')+'\n';
+  if(st.length)s+=`\n六、反复拖延\n`+st.map(t=>`· ${t.title}（顺延 ${t.rollCount} 次）`).join('\n')+'\n';
   return s;
 }
 </script>

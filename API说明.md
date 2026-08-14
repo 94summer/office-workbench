@@ -58,16 +58,32 @@ GET http://<本机IP或localhost>:<端口>/api/weekly
   "dragged": [                                 // 反复拖延（顺延≥2次）
     { "title": "整理上周会议纪要", "rollCount": 3 }
   ],
+  "nextWeekPlan": {                             // 下周工作计划（未完成待办汇总）
+    "overdue": [                               // 逾期未完成：截止日已过去仍未完成
+      { "title": "补齐定价表", "priority": "P1", "priorityLabel": "重要",
+        "due": "2026-08-11", "project": "Q3 客户续约方案" }
+    ],
+    "scheduled": [                             // 下周排期：截止日落在下周（周一~周日）
+      { "title": "发起 IPMT 评审", "priority": "P1", "priorityLabel": "重要",
+        "due": "2026-08-18", "project": "Q3 客户续约方案" }
+    ],
+    "unscheduled": [                           // 未排期：无截止日，作为下周 backlog
+      { "title": "梳理竞品动态", "priority": "P2", "priorityLabel": "一般",
+        "due": null, "project": "零散事项" }
+    ],
+    "total": 3
+  },
   "reviewText": "【周复盘】2026-08-10 ~ 2026-08-16\n\n一、完成情况\n..."  // 复盘文本
 }
 ```
 
 - **本周完成清单** = `completionList`（已完成且 `doneAt` 落在该周的任务）。
-- **复盘文本** = `reviewText`（与应用内「复制复盘文本」完全一致）。
+- **下周工作计划** = `nextWeekPlan`（未完成待办，按「逾期 / 下周排期 / 未排期」分组，可直接作为下周计划采用）。
+- **复盘文本** = `reviewText`（与应用内「复制复盘文本」完全一致，含「五、下周工作计划」章节）。
 
 ### 3.2 `format=md`
 
-返回一份 **Markdown 文档**，含五个章节：完成情况 / 精力分布 / 本周完成清单 / 卡点 / 反复拖延。可直接保存为 `.md` 或转发到支持 Markdown 的系统（如知识库、IM 机器人）。
+返回一份 **Markdown 文档**，含六个章节：完成情况 / 精力分布 / 本周完成清单 / 卡点 / 下周工作计划 / 反复拖延。可直接保存为 `.md` 或转发到支持 Markdown 的系统（如知识库、IM 机器人）。
 
 ### 3.3 `format=txt`
 

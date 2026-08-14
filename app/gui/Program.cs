@@ -259,14 +259,35 @@ static class Program
         var pm2 = new Dictionary<string, int>();
         foreach (var d in doneList) pm2[d.projName] = (pm2.ContainsKey(d.projName) ? pm2[d.projName] : 0) + 1;
         var energy = pm2.OrderByDescending(x => x.Value).ToList();
+
+        // 下周工作计划：未完成待办按「逾期 / 下周排期 / 未排期」分组
+        string todayStr = TodayStr();
+        string nxtMon = AddDays(mon, 7), nxtSun = AddDays(mon, 13);
+        string ProjNameOf2(string pid2) { if (string.IsNullOrEmpty(pid2)) return "零散事项"; return projMap.TryGetValue(pid2, out var pmx) ? pmx.name : "已删除项目"; }
+        var nextOverdue = new List<(string title, string pri, string due, string projName)>();
+        var nextSched = new List<(string title, string pri, string due, string projName)>();
+        var nextUnsched = new List<(string title, string pri, string due, string projName)>();
+        foreach (var t in tasks)
+        {
+            bool done = t.TryGetProperty("done", out var de) && de.ValueKind == JsonValueKind.True;
+            if (done) continue;
+            var due = t.TryGetProperty("due", out var ue) ? ue.GetString() : null;
+            var title = t.TryGetProperty("title", out var te) ? te.GetString() : "(无标题)";
+            var pri = t.TryGetProperty("pri", out var pe) ? pe.GetString() : "P2";
+            var pid = t.TryGetProperty("projectId", out var pide) ? pide.GetString() : null;
+            if (!string.IsNullOrEmpty(due) && string.Compare(due, todayStr) < 0) nextOverdue.Add((title, pri, due, ProjNameOf2(pid)));
+            else if (!string.IsNullOrEmpty(due) && string.Compare(due, nxtMon) >= 0 && string.Compare(due, nxtSun) <= 0) nextSched.Add((title, pri, due, ProjNameOf2(pid)));
+            else nextUnsched.Add((title, pri, due ?? "", ProjNameOf2(pid)));
+        }
+
         bool isCurrent = mon == MondayOf(TodayStr());
 
-        string reviewText = BuildReviewText(mon, days[6], doneCount, pct, openCount, p0, p1, p2, doneList, blockers, rolled);
+        string reviewText = BuildReviewText(mon, days[6], doneCount, pct, openCount, p0, p1, p2, doneList, blockers, rolled, nextOverdue, nextSched, nextUnsched);
 
         if (format == "txt")
             return (reviewText, "text/plain; charset=utf-8");
         if (format == "md")
-            return (BuildReviewMarkdown(mon, days[6], isCurrent, doneCount, pct, openCount, createdCount, noteCount, blockers.Count, rolled.Count, p0, p1, p2, energy, doneList, blockers, rolled), "text/markdown; charset=utf-8");
+            return (BuildReviewMarkdown(mon, days[6], isCurrent, doneCount, pct, openCount, createdCount, noteCount, blockers.Count, rolled.Count, p0, p1, p2, energy, doneList, blockers, rolled, nextOverdue, nextSched, nextUnsched), "text/markdown; charset=utf-8");
 
         string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
         var sb = new StringBuilder();
@@ -292,14 +313,22 @@ static class Program
         bool firstR = true;
         foreach (var r in rolled) { if (!firstR) sb.Append(','); firstR = false; sb.Append("{\"title\":" + JsonString(r.title) + ",\"rollCount\":" + r.rc + "}"); }
         sb.Append(']');
+        sb.Append(",\"nextWeekPlan\":{\"overdue\":[");
+        bool firstO = true; foreach (var t in nextOverdue) { if (!firstO) sb.Append(','); firstO = false; sb.Append("{\"title\":" + JsonString(t.title) + ",\"priority\":" + JsonString(t.pri) + ",\"priorityLabel\":" + JsonString(PriLabel(t.pri)) + ",\"due\":" + JsonString(t.due) + ",\"project\":" + JsonString(t.projName) + "}"); }
+        sb.Append("],\"scheduled\":[");
+        bool firstS = true; foreach (var t in nextSched) { if (!firstS) sb.Append(','); firstS = false; sb.Append("{\"title\":" + JsonString(t.title) + ",\"priority\":" + JsonString(t.pri) + ",\"priorityLabel\":" + JsonString(PriLabel(t.pri)) + ",\"due\":" + JsonString(t.due) + ",\"project\":" + JsonString(t.projName) + "}"); }
+        sb.Append("],\"unscheduled\":[");
+        bool firstU = true; foreach (var t in nextUnsched) { if (!firstU) sb.Append(','); firstU = false; sb.Append("{\"title\":" + JsonString(t.title) + ",\"priority\":" + JsonString(t.pri) + ",\"priorityLabel\":" + JsonString(PriLabel(t.pri)) + ",\"due\":null,\"project\":" + JsonString(t.projName) + "}"); }
+        sb.Append("],\"total\":" + (nextOverdue.Count + nextSched.Count + nextUnsched.Count) + "}");
         sb.Append(",\"reviewText\":" + JsonString(reviewText));
         sb.Append('}');
         return (sb.ToString(), "application/json; charset=utf-8");
     }
 
-    static string BuildReviewText(string mon, string end, int done, int pct, int open, int p0, int p1, int p2, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled)
+    static string BuildReviewText(string mon, string end, int done, int pct, int open, int p0, int p1, int p2, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled, List<(string title, string pri, string due, string projName)> nextOverdue, List<(string title, string pri, string due, string projName)> nextSched, List<(string title, string pri, string due, string projName)> nextUnsched)
     {
         string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
+        string Md(string d) { if (string.IsNullOrEmpty(d)) return ""; var ps = d.Split('-'); return ps.Length == 3 ? int.Parse(ps[1]) + "/" + int.Parse(ps[2]) : d; }
         var s = new StringBuilder();
         s.Append("【周复盘】" + mon + " ~ " + end + "\n\n");
         s.Append("一、完成情况\n共完成 " + done + " 件，完成率 " + pct + "%，未完成 " + open + " 件。\n");
@@ -316,13 +345,23 @@ static class Program
         s.Append("四、卡点\n");
         if (blockers.Count == 0) s.Append("· 无\n");
         else foreach (var b in blockers) s.Append("· " + b.name + "：" + b.blocker + "｜下一步：" + (string.IsNullOrEmpty(b.next) ? "待定" : b.next) + "\n");
-        if (rolled.Count > 0) { s.Append("\n五、反复拖延\n"); foreach (var r in rolled) s.Append("· " + r.title + "（顺延 " + r.rc + " 次）\n"); }
+        // 五、下周工作计划
+        s.Append("\n五、下周工作计划\n");
+        if (nextOverdue.Count + nextSched.Count + nextUnsched.Count == 0) s.Append("· 无\n");
+        else
+        {
+            if (nextOverdue.Count > 0) { s.Append("· 逾期未完成（" + nextOverdue.Count + " 件）\n"); foreach (var t in nextOverdue) s.Append("  - " + t.title + "（" + PriLabel(t.pri) + "）｜截止 " + Md(t.due) + "｜" + t.projName + "\n"); }
+            if (nextSched.Count > 0) { s.Append("· 下周排期（" + nextSched.Count + " 件）\n"); foreach (var t in nextSched) s.Append("  - " + t.title + "（" + PriLabel(t.pri) + "）｜截止 " + Md(t.due) + "｜" + t.projName + "\n"); }
+            if (nextUnsched.Count > 0) { s.Append("· 未排期（" + nextUnsched.Count + " 件）\n"); foreach (var t in nextUnsched) s.Append("  - " + t.title + "（" + PriLabel(t.pri) + "）｜" + t.projName + "\n"); }
+        }
+        if (rolled.Count > 0) { s.Append("\n六、反复拖延\n"); foreach (var r in rolled) s.Append("· " + r.title + "（顺延 " + r.rc + " 次）\n"); }
         return s.ToString();
     }
 
-    static string BuildReviewMarkdown(string mon, string end, bool isCurrent, int done, int pct, int open, int created, int notes, int blocked, int rolledCnt, int p0, int p1, int p2, List<KeyValuePair<string, int>> energy, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled)
+    static string BuildReviewMarkdown(string mon, string end, bool isCurrent, int done, int pct, int open, int created, int notes, int blocked, int rolledCnt, int p0, int p1, int p2, List<KeyValuePair<string, int>> energy, List<(string title, string pri, string doneAt, string projName)> list, List<(string name, string blocker, string next)> blockers, List<(string title, int rc)> rolled, List<(string title, string pri, string due, string projName)> nextOverdue, List<(string title, string pri, string due, string projName)> nextSched, List<(string title, string pri, string due, string projName)> nextUnsched)
     {
         string PriLabel(string p) => p == "P0" ? "紧急重要" : p == "P1" ? "重要" : "一般";
+        string Md(string d) { if (string.IsNullOrEmpty(d)) return ""; var ps = d.Split('-'); return ps.Length == 3 ? int.Parse(ps[1]) + "/" + int.Parse(ps[2]) : d; }
         var s = new StringBuilder();
         s.Append("# 周复盘 " + mon + " ~ " + end + (isCurrent ? "（本周）" : "") + "\n\n");
         s.Append("## 一、完成情况\n\n");
@@ -337,7 +376,16 @@ static class Program
         s.Append("\n## 四、卡点\n\n");
         if (blockers.Count == 0) s.Append("- （无）\n");
         else foreach (var b in blockers) s.Append("- **" + b.name + "**：" + b.blocker + " ｜ 下一步：" + (string.IsNullOrEmpty(b.next) ? "待定" : b.next) + "\n");
-        if (rolled.Count > 0) { s.Append("\n## 五、反复拖延\n\n"); foreach (var r in rolled) s.Append("- " + r.title + "（顺延 " + r.rc + " 次）\n"); }
+        // 五、下周工作计划
+        s.Append("\n## 五、下周工作计划\n\n");
+        if (nextOverdue.Count + nextSched.Count + nextUnsched.Count == 0) s.Append("- （无）\n");
+        else
+        {
+            if (nextOverdue.Count > 0) { s.Append("### 逾期未完成（" + nextOverdue.Count + " 件）\n\n"); foreach (var t in nextOverdue) s.Append("- " + t.title + "（" + PriLabel(t.pri) + "）— 截止 " + Md(t.due) + (t.projName == "零散事项" ? "" : "，" + t.projName) + "\n"); s.Append("\n"); }
+            if (nextSched.Count > 0) { s.Append("### 下周排期（" + nextSched.Count + " 件）\n\n"); foreach (var t in nextSched) s.Append("- " + t.title + "（" + PriLabel(t.pri) + "）— 截止 " + Md(t.due) + (t.projName == "零散事项" ? "" : "，" + t.projName) + "\n"); s.Append("\n"); }
+            if (nextUnsched.Count > 0) { s.Append("### 未排期（" + nextUnsched.Count + " 件）\n\n"); foreach (var t in nextUnsched) s.Append("- " + t.title + "（" + PriLabel(t.pri) + "）" + (t.projName == "零散事项" ? "" : "，" + t.projName) + "\n"); s.Append("\n"); }
+        }
+        if (rolled.Count > 0) { s.Append("\n## 六、反复拖延\n\n"); foreach (var r in rolled) s.Append("- " + r.title + "（顺延 " + r.rc + " 次）\n"); }
         return s.ToString();
     }
 
