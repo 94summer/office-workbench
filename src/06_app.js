@@ -6,7 +6,8 @@ const fmtTime=()=>fmtNow();
 /* ==================== 统一渲染 ==================== */
 function renderAll(){
   renderBanner();renderHome();renderTodo();renderCal();
-  renderNote();renderProj();renderReview();renderSetting();
+  renderNote();renderProj();renderReview();renderSetting();renderMarket();
+  tkRender('version');tkRender('requirement');
 }
 
 /* ==================== 设置页（久坐提醒状态） ==================== */
@@ -379,7 +380,9 @@ function crc32(bytes){
 }
 function concatU(arrs){let len=0;arrs.forEach(a=>len+=a.length);const out=new Uint8Array(len);let o=0;arrs.forEach(a=>{out.set(a,o);o+=a.length;});return out;}
 function colLetter(j){let s='';j++;while(j>0){let r=j%26;if(r===0){r=26;j--;}s=String.fromCharCode(64+r)+s;j=Math.floor(j/26);}return s;}
-function xmlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* 写回 XML 时转义，并把真实换行 \n / \r 编码成 &#10;，这样 Excel 能正确渲染为单元格内换行（与读取端 xmlUnesc 互逆）。
+   & 必须先转，否则已有的 &#10; 会被再次转义成 &amp;#10;。 */
+function xmlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r\n|\r|\n/g,'&#10;');}
 function sheetXml(rows){
   let r='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
   rows.forEach((row,i)=>{const ri=i+1;r+=`<row r="${ri}">`;
@@ -472,7 +475,16 @@ function exportJson(){
 
 /* --- xlsx 读取 --- */
 function xmlText(u){return u?new TextDecoder('utf-8').decode(u):'';}
-function xmlUnesc(s){return String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');}
+/* 反解 XML 实体：标准五实体 + 数字字符引用（&#10; 换行 / &#13; 回车 / &#x0A; 等）。
+   关键修复：Excel 多行单元格以 &#10; / &#13; 实体存换行，若不解码会原样带进内存，页面与导出文件都显示成字面量 &#10;。
+   注意顺序：命名实体（除 &amp;）先解，数字引用其次，&amp; 必须最后解（避免先把 &amp;#10; 拆坏）。 */
+function xmlUnesc(s){
+  return String(s)
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'")
+    .replace(/&#x([0-9a-fA-F]+);/g,(m,h)=>String.fromCharCode(parseInt(h,16)))
+    .replace(/&#(\d+);/g,(m,n)=>String.fromCharCode(+n))
+    .replace(/&amp;/g,'&');
+}
 /* 解析单个单元格值；ss 为共享字符串索引表（Excel 把文本写成 t="s" + 索引） */
 function cellValue(inner,type,ss){
   if(type==='inlineStr'){const t=/<t[^>]*>([\s\S]*?)<\/t>/.exec(inner);return t?xmlUnesc(t[1]):'';}
@@ -661,6 +673,7 @@ function openSheet(){
   const el=document.createElement('div');el.className='sheet';el.id='navSheet';
   el.innerHTML=`<div class="sheet-in"><div class="sheet-grab"></div>
     <button class="nav-item" data-go="review"><svg class="ic"><use href="#i-chart"/></svg>每周复盘</button>
+    <button class="nav-item" data-go="market"><svg class="ic"><use href="#i-grid"/></svg>市场项目跟踪</button>
     <button class="nav-item" data-go="setting"><svg class="ic"><use href="#i-set"/></svg>数据与提醒（久坐 / 备份）</button>
     <button class="nav-item" id="sheetCfg"><svg class="ic"><use href="#i-file"/></svg>配置文件数据源</button>
     <button class="nav-item" id="sheetClose"><svg class="ic"><use href="#i-x"/></svg>收起</button></div>`;

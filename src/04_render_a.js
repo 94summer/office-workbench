@@ -66,10 +66,11 @@ function renderHome(){
 
   /* 统计卡 */
   const wk=weekStats(mondayOf(t));
+  const mst=mkMarketStats();
   $('#homeStats').innerHTML=[
     ['今日待办',todayT.length+overs.length,'g','i-check-sq',`已完成 ${DB.tasks.filter(x=>x.done&&x.doneAt===t).length} 件`],
     ['逾期顺延',overs.length,'r','i-rot',overs.length?`最久顺延 ${Math.max(...overs.map(x=>x.rollCount||1))} 次`:'保持住'],
-    ['进行中项目',DB.projects.filter(p=>p.status!=='done').length,'b','i-layers',`${blocked.length} 个卡住`],
+    ['市场进行中',mst.open,'b','i-grid',`共 ${mst.total} 项 · 已关闭 ${mst.closed} · 本周 +${mst.weekNew}`],
     ['本周完成',wk.done,'a','i-fire',`完成率 ${wk.pct}%`]
   ].map(([lb,vl,c,ic,ex])=>`<div class="stat ${c}"><div class="lb"><svg class="ic sm"><use href="#${ic}"/></svg>${lb}</div>
     <div class="vl">${vl}</div><div class="ex">${ex}</div></div>`).join('');
@@ -106,7 +107,7 @@ function renderHome(){
   $('#heroP').textContent=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`+(DB.meta.rolledToday?` · 已自动把 ${DB.meta.rolledToday} 件昨日未完成任务挪到今天`:'');
   $('#navDate').textContent=`${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`;
   $('#hsA').textContent=list.length;$('#hsB').textContent=overs.length;
-  $('#hsC').textContent=DB.projects.filter(p=>p.status!=='done').length;$('#hsD').textContent=wk.pct+'%';
+  $('#hsC').textContent=mkOpenCount();$('#hsD').textContent=wk.pct+'%';
   const bh=$('#bd-home');bh.textContent=overs.length;bh.classList.toggle('hide',!overs.length);
   const bt=$('#bd-todo');bt.textContent=list.length;bt.classList.toggle('hide',!list.length);bt.className='badge mut'+(list.length?'':' hide');
   const bp=$('#bd-proj');bp.textContent=blocked.length;bp.classList.toggle('hide',!blocked.length);

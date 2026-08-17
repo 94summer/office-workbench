@@ -7,6 +7,7 @@
 <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4.5 20V10.5M9.8 20V4.5M15.2 20v-6.5M20.5 20v-9"/><path d="M2.5 20.5h19"/></symbol>
 <symbol id="i-set" viewBox="0 0 24 24"><path d="M3.5 7h17M3.5 12h17M3.5 17h17"/><circle cx="8.5" cy="7" r="2.1"/><circle cx="15.5" cy="12" r="2.1"/><circle cx="10" cy="17" r="2.1"/></symbol>
 <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4.5h6v6H4zM14 4.5h6v6h-6zM4 13.5h6v6H4zM14 13.5h6v6h-6z"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 3.5v11.5M7.5 10.5l4.5 4.5 4.5-4.5M4 20.5h16"/></symbol>
 <symbol id="i-ul" viewBox="0 0 24 24"><path d="M12 20.5V9M7.5 13.5L12 9l4.5 4.5M4 3.5h16"/></symbol>
@@ -50,7 +51,11 @@
       <button class="nav-item" data-go="proj"><svg class="ic"><use href="#i-layers"/></svg>项目跟进<span class="badge hide" id="bd-proj">0</span></button>
       <div class="nav-sec">回顾与工具</div>
       <button class="nav-item" data-go="review"><svg class="ic"><use href="#i-chart"/></svg>每周复盘</button>
+      <button class="nav-item" data-go="market"><svg class="ic"><use href="#i-grid"/></svg>市场项目跟踪</button>
       <button class="nav-item" data-go="setting"><svg class="ic"><use href="#i-set"/></svg>数据与提醒</button>
+      <div class="nav-sec">产品跟踪</div>
+      <button class="nav-item" data-go="version"><svg class="ic"><use href="#i-grid"/></svg>版本管理</button>
+      <button class="nav-item" data-go="requirement"><svg class="ic"><use href="#i-layers"/></svg>需求管理</button>
     </div>
     <div class="nav-foot">数据来源：<b id="navStore">本机浏览器</b><br>已存 <b id="navCount">0</b> 条 · <span id="navSave">已自动保存</span></div>
   </aside>
@@ -79,7 +84,7 @@
         <div class="hero-stats">
           <div class="hero-stat"><b id="hsA">0</b><span>今日待办</span></div>
           <div class="hero-stat"><b id="hsB">0</b><span>逾期顺延</span></div>
-          <div class="hero-stat"><b id="hsC">0</b><span>进行中项目</span></div>
+          <div class="hero-stat"><b id="hsC">0</b><span>市场进行中</span></div>
           <div class="hero-stat"><b id="hsD">0%</b><span>本周完成率</span></div>
         </div>
       </div>
@@ -268,6 +273,24 @@
         </div></div>
       </section>
     </div>
+
+      <!-- 市场项目跟踪 -->
+      <section class="page" id="p-market">
+        <div class="sec-title"><svg class="ic lg" style="color:var(--brand)"><use href="#i-grid"/></svg>市场项目跟踪<span class="sub">独立数据目录 · 与系统数据隔离</span></div>
+        <div class="mk-root" id="mkRoot"></div>
+      </section>
+
+      <!-- 版本管理 -->
+      <section class="page" id="p-version">
+        <div class="sec-title"><svg class="ic lg" style="color:var(--brand)"><use href="#i-grid"/></svg>版本管理<span class="sub">按产品类别分标签 · 数据源可单独配置（只读加载，不改动原文件）</span></div>
+        <div class="tk-root" id="tkRoot-version"></div>
+      </section>
+
+      <!-- 需求管理 -->
+      <section class="page" id="p-requirement">
+        <div class="sec-title"><svg class="ic lg" style="color:var(--brand)"><use href="#i-layers"/></svg>需求管理<span class="sub">按产品类别分标签 · 数据源可单独配置（只读加载，不改动原文件）</span></div>
+        <div class="tk-root" id="tkRoot-requirement"></div>
+      </section>
   </main>
 </div>
 

@@ -346,6 +346,82 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xm
   .tabbar button{font-size:9px}
 }
 @media print{.nav,.tabbar,.hero,.btn{display:none}.main{margin:0}}
+
+/* ===== 市场项目跟踪模块 ===== */
+.mk-root{min-height:200px}
+.mk-empty{padding:34px 26px;text-align:center;max-width:580px;margin:18px auto}
+.mk-empty-ico{margin-bottom:6px;color:var(--brand)}
+.mk-empty h3{font-size:18px;margin:6px 0 10px}
+.mk-empty p{font-size:13.5px;color:var(--tx2);line-height:1.8;margin:0 0 16px}
+.mk-tip{font-size:12px;color:var(--tx3);margin-top:14px}
+.mk-empty2{font-size:13px;color:var(--tx3);padding:18px;text-align:center;background:var(--bg);border-radius:var(--r-s);margin:10px 0}
+.mk-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.mk-dir{display:flex;align-items:center;gap:8px;flex:1;min-width:240px;flex-wrap:wrap}
+.mk-dirlabel{font-size:12.5px;color:var(--tx2);background:var(--brand-ll);padding:4px 9px;border-radius:8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-acts{display:flex;gap:7px;flex-wrap:wrap}
+.mk-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.mk-tab{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12.5px;font-weight:600;color:var(--tx2);cursor:pointer}
+.mk-tab:hover{border-color:var(--brand)}
+.mk-tab.on{background:var(--brand-l);border-color:var(--brand);color:var(--brand-d)}
+.mk-tab-sub{font-size:10.5px;color:var(--tx3);font-weight:400}
+.mk-meta{font-size:12.5px;color:var(--tx2);margin-bottom:10px;line-height:1.7}
+.mk-meta .mk-dirty{color:var(--amber);font-weight:700}
+.mk-meta code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px}
+.mk-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mk-gridwrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.mk-table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+.mk-table th,.mk-table td{border-bottom:1px solid var(--line-s);border-right:1px solid var(--line-s);padding:7px 9px;vertical-align:top;text-align:left;min-width:92px}
+.mk-table thead th{position:sticky;top:0;background:var(--brand-l);color:var(--brand-dd);font-weight:700;z-index:2;cursor:pointer;user-select:none;white-space:nowrap}
+.mk-table thead th.on{background:var(--brand);color:#fff}
+.mk-arrow{font-size:10px;margin-left:2px}
+.mk-thx{margin-left:6px;color:var(--red);font-weight:700;opacity:.45;cursor:pointer}
+.mk-thx:hover{opacity:1}
+.mk-table tbody tr:hover{background:var(--brand-ll)}
+.mk-rownum{color:var(--tx3);text-align:center;min-width:38px!important;background:var(--bg);font-size:11px}
+.mk-table thead .mk-rownum{background:var(--brand-l)}
+.mk-td{cursor:pointer;white-space:pre-wrap;word-break:break-word}
+.mk-td:hover{background:#fff8e6}
+.mk-td.mk-long{max-width:320px}
+.mk-td .mk-ph{color:var(--tx3);opacity:.55}
+/* 详情弹窗里的多行长文本字段 */
+.mk-detail-ta{white-space:pre-wrap;word-break:break-word;line-height:1.6;font-size:13px}
+.mk-edit{width:100%;border:1px solid var(--brand);border-radius:5px;padding:4px 6px;font-size:12.5px;font-family:inherit}
+.mk-td-act{background:var(--bg);text-align:center;min-width:44px!important}
+.mk-nodata{text-align:center;color:var(--tx3);padding:24px}
+/* 每列筛选行 */
+.mk-table thead{position:sticky;top:0;z-index:3}
+.mk-frow th{background:#fbfcfe;position:sticky;top:33px;z-index:3;padding:4px 6px;border-bottom:1px solid var(--line);border-right:1px solid var(--line-s);cursor:default}
+.mk-flt{width:100%;min-width:70px;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;box-sizing:border-box}
+.mk-flt:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-ll)}
+.mk-fhint{font-size:12px;color:var(--tx3)}
+.mk-fltth{font-weight:400}
+
+/* 富文本预览（历史进展支持链接/图片） */
+.mk-rich-preview{margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12.5px;line-height:1.6;word-break:break-word;max-height:220px;overflow:auto}
+.mk-rich-line{white-space:pre-wrap}
+.mk-rich-img{max-width:100%;max-height:160px;border-radius:8px;display:block;margin:2px 0;cursor:zoom-in;border:1px solid var(--line)}
+.mk-rich-preview a{color:var(--blue);text-decoration:underline;word-break:break-all}
+/* 自定义列设置弹窗 */
+.mk-colsets{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:48vh;overflow:auto;padding:2px}
+.mk-colset{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;cursor:pointer;background:#fff}
+.mk-colset:hover{border-color:var(--brand)}
+.mk-colset input{width:16px;height:16px;accent-color:var(--brand)}
+.mk-custom{color:var(--brand-d);font-weight:600}
+/* ===== 版本管理 / 需求管理 通用跟踪模块 ===== */
+.tk-root{display:block}
+.tk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tk-dir{display:flex;align-items:center;gap:8px}
+.tk-dirlabel{max-width:280px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px;color:var(--tx2)}
+.tk-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tk-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.tk-tab{display:flex;align-items:center;gap:8px;padding:9px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:13.5px;font-weight:600;color:var(--tx2);cursor:pointer;transition:.15s}
+.tk-tab:hover{border-color:var(--brand);color:var(--brand-d)}
+.tk-tab.on{background:var(--brand-l);border-color:var(--brand);color:var(--brand-d)}
+.tk-tab-sub{font-size:11px;font-weight:500;color:var(--tx3);background:var(--bg);padding:1px 7px;border-radius:9px}
+.tk-meta{font-size:12.5px;color:var(--tx2);margin-bottom:10px;line-height:1.7}
+.tk-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tk-fhint{font-size:12px;color:var(--tx3)}
+.tk-empty3{color:var(--tx3);font-size:13px}
 </style>
 </head>
 <body>

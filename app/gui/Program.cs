@@ -28,6 +28,7 @@ static class Program
     private static string _cfgPath = null;     // 绑定的配置文件路径
     private static string _cfgMode = null;     // json / xlsx
     private const string SRV_MARK = "window.__SERVER_DB__=null;window.__SERVER_REV__=0;";
+    internal static string _userDataDirOverride = null;   // --user-data-dir 指定的隔离目录（用于安全测试）
 
     [STAThread]
     static void Main()
@@ -42,6 +43,15 @@ static class Program
                     "个人办公工作台已经在运行了。\n\n请在任务栏里找到它的窗口。\n如果找不到，请在任务管理器结束「办公工作台」进程后重试。",
                     "已在运行", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
+            }
+
+            // 解析启动参数：--user-data-dir <path> 可让本进程使用独立目录存放 WebView2 / localStorage，
+            // 用于安全测试，绝不污染真实数据目录（C:/Users/.../个人办公工作台）。
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 1; i < args.Length; i++)
+            {
+                if ((args[i] == "--user-data-dir" || args[i] == "--userDataDir") && i + 1 < args.Length)
+                { _userDataDirOverride = args[i + 1]; i++; }
             }
 
             Application.EnableVisualStyles();
@@ -82,6 +92,18 @@ static class Program
                 "办公工作台", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch { }
+    }
+
+    /* 以共享读模式读取文件字节：即使文件正被 Excel / 其它进程占用也能读取，
+       避免「文件正由另一进程使用」导致导入失败。 */
+    internal static byte[] ReadAllBytesShared(string path)
+    {
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (var ms = new MemoryStream())
+        {
+            fs.CopyTo(ms);
+            return ms.ToArray();
+        }
     }
 
     static void StartServer()
@@ -661,10 +683,12 @@ class MainForm : Form
     {
         try
         {
-            // 固定用户数据目录 → localStorage 永久保存
-            var dataDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "个人办公工作台", "WebView2");
+            // 固定用户数据目录 → localStorage 永久保存；若启动时指定了 --user-data-dir，则使用隔离目录
+            var dataDir = string.IsNullOrEmpty(Program._userDataDirOverride)
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "个人办公工作台", "WebView2")
+                : Program._userDataDirOverride;
             Directory.CreateDirectory(dataDir);
             var env = await CoreWebView2Environment.CreateAsync(null, dataDir);
             await web.EnsureCoreWebView2Async(env);
@@ -709,7 +733,7 @@ class MainForm : Form
     /* 配置文件数据源：JS 通过 postMessage 请求读写 / 选择本地文件，C# 负责真正的文件 I/O */
     void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        long id = 0; string action = "", path = "", text = ""; bool binary = false;
+        long id = 0; string action = "", path = "", text = "", name = ""; bool binary = false, backup = false;
         try
         {
             using var doc = JsonDocument.Parse(e.WebMessageAsJson);
@@ -719,6 +743,8 @@ class MainForm : Form
             path = root.TryGetProperty("path", out var pEl) ? pEl.GetString() : "";
             binary = root.TryGetProperty("binary", out var bEl) && bEl.GetBoolean();
             text = root.TryGetProperty("text", out var tEl) ? tEl.GetString() : "";
+            name = root.TryGetProperty("name", out var nEl) ? nEl.GetString() : "";
+            backup = root.TryGetProperty("backup", out var kEl) && kEl.GetBoolean();
         }
         catch { return; }
 
@@ -794,6 +820,123 @@ class MainForm : Form
                                 if (d.ShowDialog() == DialogResult.OK) p = d.FileName;
                             }
                             resp = JsonSerializer.Serialize(new { id, ok = p != null, path = p });
+                            break;
+                        }
+
+                    /* ==================================================================
+                       以下为「市场项目跟踪」模块专属动作。
+                       刻意与上面的 readConfig / writeConfig / pickOpen / pickSave 完全分离：
+                       独立的目录概念、独立的读写、写前强制备份，
+                       不触碰 _cfgPath / _dbJson，也永不写入用户绑定的系统配置文件。
+                       ================================================================== */
+                    case "mkPickDir":
+                        {
+                            string p = null;
+                            using (var d = new FolderBrowserDialog())
+                            {
+                                d.Description = "选择「市场项目跟踪」专用数据目录（与系统数据目录相互隔离）";
+                                d.ShowNewFolderButton = true;
+                                if (!string.IsNullOrEmpty(path) && Directory.Exists(path)) d.SelectedPath = path;
+                                if (d.ShowDialog() == DialogResult.OK) p = d.SelectedPath;
+                            }
+                            resp = JsonSerializer.Serialize(new { id, ok = p != null, path = p });
+                            break;
+                        }
+                    case "mkListDir":
+                        {
+                            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                            {
+                                resp = JsonSerializer.Serialize(new { id, ok = false, error = "数据目录不存在：" + path });
+                                break;
+                            }
+                            var list = new List<object>();
+                            foreach (var f in Directory.GetFiles(path))
+                            {
+                                var fn = Path.GetFileName(f);
+                                var ext = Path.GetExtension(f).ToLowerInvariant();
+                                if (ext != ".xlsx" && ext != ".csv") continue;
+                                if (fn.StartsWith("~$")) continue;          // Excel 打开时的临时锁文件
+                                var fi = new FileInfo(f);
+                                list.Add(new
+                                {
+                                    name = fn,
+                                    path = f,
+                                    size = fi.Length,
+                                    mtime = fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm"),
+                                    ext = ext.TrimStart('.')
+                                });
+                            }
+                            resp = JsonSerializer.Serialize(new { id, ok = true, path, files = list });
+                            break;
+                        }
+                    case "mkRead":
+                        {
+                            if (!File.Exists(path)) throw new FileNotFoundException("文件不存在：" + path);
+                            // 一律按字节回传 base64，字符编码（UTF-8 / GBK）交给前端 TextDecoder 探测，
+                            // 免得为了 GB18030 给项目引入 System.Text.Encoding.CodePages 依赖
+                            // 用共享读模式：文件被 Excel 打开时也能读取
+                            resp = JsonSerializer.Serialize(new { id, ok = true, path, text = Convert.ToBase64String(Program.ReadAllBytesShared(path)) });
+                            break;
+                        }
+                    case "mkWrite":
+                        {
+                            var dir = Path.GetDirectoryName(path);
+                            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                            string bak = null;
+                            if (backup && File.Exists(path))
+                            {
+                                bak = path + ".bak";
+                                File.Copy(path, bak, true);
+                            }
+                            // 先写临时文件再替换，避免写一半掉电导致原文件损坏
+                            var tmp = path + ".tmp";
+                            if (binary) File.WriteAllBytes(tmp, Convert.FromBase64String(text));
+                            else File.WriteAllText(tmp, text, new UTF8Encoding(false));
+                            if (File.Exists(path)) File.Delete(path);
+                            File.Move(tmp, path);
+                            resp = JsonSerializer.Serialize(new { id, ok = true, path, bak });
+                            break;
+                        }
+                    case "mkSaveInto":
+                        {
+                            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                                throw new DirectoryNotFoundException("数据目录不存在：" + path);
+                            var safe = Path.GetFileName(name ?? "");            // 剥掉任何路径成分，防目录穿越
+                            if (string.IsNullOrEmpty(safe)) throw new ArgumentException("文件名为空");
+                            var stem = Path.GetFileNameWithoutExtension(safe);
+                            var ext2 = Path.GetExtension(safe);
+                            var target = Path.Combine(path, safe);
+                            for (int i = 2; File.Exists(target) && i < 200; i++)   // 同名不覆盖，自动加序号
+                                target = Path.Combine(path, stem + "(" + i + ")" + ext2);
+                            if (binary) File.WriteAllBytes(target, Convert.FromBase64String(text));
+                            else File.WriteAllText(target, text, new UTF8Encoding(false));
+                            resp = JsonSerializer.Serialize(new { id, ok = true, path = target, name = Path.GetFileName(target) });
+                            break;
+                        }
+                    case "mkPickTable":
+                        {
+                            string p = null, t = null, n = null; bool bin = false;
+                            using (var d = new OpenFileDialog())
+                            {
+                                d.Filter = "表格文件 (*.xlsx;*.csv)|*.xlsx;*.csv|Excel (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv|所有文件 (*.*)|*.*";
+                                d.Title = "选择要导入「市场项目跟踪」的表格附件";
+                                if (d.ShowDialog() == DialogResult.OK) p = d.FileName;
+                            }
+                            if (p != null)
+                            {
+                                bin = true;                                     // 同 mkRead：一律按字节回传
+                                n = Path.GetFileName(p);
+                                t = Convert.ToBase64String(Program.ReadAllBytesShared(p));   // 共享读，Excel 打开时也能读
+                            }
+                            resp = JsonSerializer.Serialize(new { id, ok = p != null, path = p, name = n, text = t, binary = bin });
+                            break;
+                        }
+                    case "mkReveal":
+                        {
+                            if (string.IsNullOrEmpty(path)) throw new ArgumentException("路径为空");
+                            var arg = File.Exists(path) ? "/select,\"" + path + "\"" : "\"" + path + "\"";
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", arg) { UseShellExecute = true });
+                            resp = JsonSerializer.Serialize(new { id, ok = true });
                             break;
                         }
                 }
